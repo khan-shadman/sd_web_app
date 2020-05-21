@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title> CWIFT Table </title>
+<head>
+
+<style>
+#table-location {
+	margin-left: auto;
+    margin-right: auto;
+    width: 70%;
+}
+
+</style>
+<h3>
+	Comparative Wage Index for Teachers
+	</h3>
+</head>
+<button>Export table to CSV</button>
+
+<body>
+<div id="table-location"></div>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+
+<script>
+	
+var svg = d3.select("body").append("svg")
+	.attr("height", 1)
+	.attr("width", 1);
+
+var table = d3.select("#table-location")
+	.append("table")
+	.attr("class", "table table-condensed table-striped"),
+	thead = table.append("thead"),
+	tbody = table.append("tbody");
+
+
+d3.json("{% url "cwift_json" %}", function(error, data){
+    let cwift_json = JSON.parse(data)
+    console.log(cwift_json[0])
+	// filter year
+	// var data = data.filter(function(d){return d.Year == '2012';});
+	// Get every column value
+    var columns = Object.keys(cwift_json[0])
+    console.log(columns)
+
+
+	// 	// .filter(function(d){
+	// 	// 	return ((d != "Year"));
+	// 	// });
+	
+	var header = thead.append("tr")
+		.selectAll("th")
+		.data(columns)
+		.enter()
+		.append("th")
+			.text(function(d){ return d;})
+			.on("click", function(d){
+				if (d == "LEAID"){
+					rows.sort(function(a, b) {
+						if (a[d] < b[d]){
+							return -1;
+						}
+						if (a[d] > b[d]){
+							return 1;
+						}
+						else{
+							return 0;
+						}
+    				});
+				}
+				else if (d == "LEA_NAME" || d == "ST_NAME"){
+					rows.sort(function(a, b){
+						return 0;
+					});
+				}
+				else {
+					rows.sort(function(a, b){
+						return b[d] - a[d];
+					})
+				}
+  			})
+            .on("mouseover", function(d){
+                d3.select(this)
+                .style("background-color", "lightgray");
+            })
+            .on("mouseout", function(d){
+			d3.select(this)
+				.style("background-color","transparent");
+		});
+
+
+	var rows = tbody.selectAll("tr")
+		.data(cwift_json)
+		.enter()
+		.append("tr")
+		.on("mouseover", function(d){
+			d3.select(this)
+				.style("background-color", "lightblue");
+		})
+		.on("mouseout", function(d){
+			d3.select(this)
+				.style("background-color","transparent");
+		});
+
+	var cells = rows.selectAll("td")
+		.data(function(row){
+			return columns.map(function(d, i){
+				return {i: d, value: row[d]};
+			});
+		})
+		.enter()
+		.append("td")
+		.html(function(d){ return d.value;});
+		
+		function download_csv(csv, filename) {
+    var csvFile;
+    var downloadLink;
+
+    // CSV FILE
+    csvFile = new Blob([csv], {type: "text/csv"});
+
+    // Download link
+    downloadLink = document.createElement("a");
+
+    // File name
+    downloadLink.download = filename;
+
+    // We have to create a link to the file
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+
+    // Make sure that the link is not displayed
+    downloadLink.style.display = "none";
+
+    // Add the link to your DOM
+    document.body.appendChild(downloadLink);
+
+    // Lanzamos
+    downloadLink.click();
+}
+
+function export_table_to_csv(html, filename) {
+	var csv = [];
+	var rows = document.querySelectorAll("table tr");
+	
+    for (var i = 0; i < rows.length; i++) {
+		var row = [], cols = rows[i].querySelectorAll("td, th");
+		
+        for (var j = 0; j < cols.length; j++) 
+            row.push(cols[j].innerText);
+        
+		csv.push(row.join(","));		
+	}
+
+    // Download CSV
+    download_csv(csv.join("\n"), filename);
+}
+
+document.querySelector("button").addEventListener("click", function () {
+    var html = document.querySelector("table").outerHTML;
+	export_table_to_csv(html, "cwift_table.csv");
+});
+
+
+});
+
+</script>
+</body>
